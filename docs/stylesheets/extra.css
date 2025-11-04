@@ -1,0 +1,48 @@
+/* Custom styles for pysiphon documentation */
+
+/* Code block improvements */
+.highlight {
+    border-radius: 0.2rem;
+}
+
+/* Admonition improvements */
+.admonition {
+    border-radius: 0.2rem;
+}
+
+/* Improve table readability */
+table {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+table th {
+    background-color: var(--md-default-fg-color--lightest);
+}
+
+table td,
+table th {
+    padding: 0.6rem;
+}
+
+/* Command examples */
+.command-example {
+    background-color: var(--md-code-bg-color);
+    padding: 1rem;
+    border-radius: 0.2rem;
+    margin: 1rem 0;
+}
+
+/* Improve code inline */
+code {
+    padding: 0.1rem 0.3rem;
+    border-radius: 0.2rem;
+}
+
+/* Session example styling */
+pre.session {
+    background-color: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1rem;
+    border-radius: 0.2rem;
+}
