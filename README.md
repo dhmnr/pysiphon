@@ -2,7 +2,7 @@
 
 Python gRPC client for Siphon service - provides memory manipulation, input control, screen capture, and recording capabilities.
 
-📚 **[Full Documentation](https://pysiphon.example.com)** | [Quick Start](#quick-start) | [API Reference](docs/api/client.md)
+📚 **[Documentation](https://pysiphon.dhmnr.sh)**
 
 ## Features
 
