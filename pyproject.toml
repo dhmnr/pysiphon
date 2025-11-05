@@ -1,6 +1,6 @@
 [project]
 name = "pysiphon"
-version = "0.1.0"
+version = "1.0.1"
 description = "Python gRPC client for Siphon service - memory manipulation, input control, and screen capture"
 readme = "README.md"
 requires-python = ">=3.10"

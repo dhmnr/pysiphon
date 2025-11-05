@@ -19,11 +19,7 @@ Python gRPC client for Siphon service - provides memory manipulation, input cont
 ## Installation
 
 ```bash
-# Install dependencies
-uv pip install -e .
-
-# Or with pip
-pip install -e .
+pip install pysiphon
 ```
 
 ## Usage
@@ -148,7 +144,7 @@ Full documentation is available with MkDocs:
 
 ```bash
 # Install docs dependencies
-pip install -e ".[docs]"
+uv sync --group docs
 
 # Serve locally
 mkdocs serve
@@ -157,14 +153,6 @@ mkdocs serve
 mkdocs build
 ```
 
-Visit http://127.0.0.1:8000 to view the documentation.
-
-Documentation includes:
-- Getting Started guides
-- Complete API reference
-- CLI usage examples
-- Recording guide
-- Development guide
 
 ## License
 
@@ -178,5 +166,5 @@ Contributions welcome! Please ensure:
 - API methods return consistent dictionary structures
 - Documentation is updated
 
-See [Contributing Guide](docs/development/contributing.md) for details.
+<!-- See [Contributing Guide](docs/development/contributing.md) for details. -->
 
