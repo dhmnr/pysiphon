@@ -10,7 +10,7 @@ Clone the repository and install:
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/pysiphon.git
+git clone https://github.com/dhmnr/pysiphon.git
 cd pysiphon
 
 # Install with pip

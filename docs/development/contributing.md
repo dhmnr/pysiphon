@@ -6,7 +6,7 @@ Thank you for your interest in contributing to pysiphon!
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/pysiphon.git
+   git clone https://github.com/dhmnr/pysiphon.git
    cd pysiphon
    ```
 

@@ -1,10 +1,10 @@
 site_name: pysiphon
 site_description: Python gRPC client for Siphon service - memory manipulation, input control, and screen capture
 site_author: pysiphon contributors
-site_url: https://pysiphon.example.com
+site_url: https://pysiphon.dhmnr.sh
 
 repo_name: pysiphon
-repo_url: https://github.com/yourusername/pysiphon
+repo_url: https://github.com/dhmnr/pysiphon
 edit_uri: edit/main/docs/
 
 theme:
@@ -106,7 +106,7 @@ extra:
     provider: mike
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/yourusername/pysiphon
+      link: https://github.com/dhmnr/pysiphon
     - icon: fontawesome/brands/python
       link: https://pypi.org/project/pysiphon/
 
