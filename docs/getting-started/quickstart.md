@@ -113,8 +113,21 @@ Execute individual commands directly:
     # Stop recording
     pysiphon rec-stop <session-id>
     
-    # Download recording file
-    pysiphon rec-download <session-id> recording.h5
+    # Download recording files to directory
+    pysiphon rec-download <session-id> ./recordings
+    ```
+
+=== "Streaming"
+
+    ```bash
+    # Stream JPEG frames (default quality 85)
+    pysiphon stream
+    
+    # Stream with custom settings
+    pysiphon stream --format jpeg --quality 75 --max-frames 100
+    
+    # Stream raw frames
+    pysiphon stream --format raw
     ```
 
 ## Python API
@@ -187,6 +200,19 @@ with SiphonClient("localhost:50051") as client:
     stats = client.stop_recording(session_id)
     print(f"Recorded {stats['total_frames']} frames")
     print(f"Average FPS: {stats['actual_fps']:.1f}")
+    
+    # Stream frames with processing
+    def process_frame(frame_data):
+        print(f"Frame {frame_data.frame_number}: {frame_data.width}x{frame_data.height}")
+        return True  # Continue streaming
+    
+    result = client.stream_frames_to_callback(
+        process_frame,
+        format="jpeg",
+        quality=85,
+        max_frames=100
+    )
+    print(f"Streamed {result['frames_received']} frames at {result['average_fps']:.1f} FPS")
 ```
 
 ## Working with Different Data Types

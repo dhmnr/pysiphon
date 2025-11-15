@@ -59,7 +59,13 @@ When in interactive mode, you have access to all commands:
 | `rec-start <dir> <attrs> [duration]` | Start recording |
 | `rec-stop <session_id>` | Stop recording |
 | `rec-status <session_id>` | Get recording status |
-| `rec-download <session_id> <file>` | Download recording |
+| `rec-download <session_id> <dir>` | Download recording files |
+
+#### Streaming
+
+| Command | Description |
+|---------|-------------|
+| `stream [format] [quality] [max_frames]` | Stream frames (format: jpeg/raw) |
 
 #### General
 
@@ -204,8 +210,44 @@ pysiphon rec-status abc123
 # Stop recording
 pysiphon rec-stop abc123
 
-# Download recording
-pysiphon rec-download abc123 recording.h5
+# Download recording files
+pysiphon rec-download abc123 ./recordings
+```
+
+### Streaming Frames
+
+Stream frames for real-time processing:
+
+```bash
+# Stream JPEG frames (default settings)
+pysiphon stream
+
+# Stream with custom quality
+pysiphon stream --format jpeg --quality 75
+
+# Stream raw frames (uncompressed)
+pysiphon stream --format raw
+
+# Limit number of frames
+pysiphon stream --max-frames 100
+
+# Full example
+pysiphon stream --format jpeg --quality 85 --max-frames 300
+```
+
+Output shows real-time statistics:
+```
+Starting frame stream (jpeg, quality=85)
+Press Ctrl+C to stop streaming
+
+Frames: 45 | FPS: 15.2 | Size: 1920x1080 | Frame #45 | Data: 42.3 KB
+Frames: 61 | FPS: 15.3 | Size: 1920x1080 | Frame #61 | Data: 43.1 KB
+...
+
+=== Streaming Complete ===
+Total frames received: 100
+Duration: 6.54s
+Average FPS: 15.29
 ```
 
 ## Global Options

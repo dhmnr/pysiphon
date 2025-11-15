@@ -24,8 +24,8 @@ with SiphonClient() as client:
     stats = client.stop_recording(session_id)
     print(f"Recorded {stats['total_frames']} frames at {stats['actual_fps']:.1f} FPS")
     
-    # Download HDF5 file
-    client.download_recording(session_id, "recording.h5")
+    # Download recording files to directory
+    client.download_recording(session_id, "./downloads")
 ```
 
 ## Starting a Recording
@@ -111,12 +111,12 @@ if stats['actual_fps'] < 55.0:
 
 ## Downloading Recordings
 
-Download the HDF5 file from server:
+Download recording files from server to a directory:
 
 ```python
 success = client.download_recording(
     session_id=session_id,
-    output_path="recording.h5",
+    output_dir="./recordings",
     show_progress=True  # Show download progress
 )
 
@@ -126,12 +126,18 @@ if success:
 
 Progress output:
 ```
-Downloading recording...
-Progress: 45.2% (2304512/5097600 bytes)
-Progress: 100.0% (5097600/5097600 bytes)
-Download complete! Saved to: recording.h5
-Total: 512 chunks, 5097600 bytes
+Downloading recording to: recordings
+Downloading: recording.h5 (5097600 bytes)
+  Progress: 45.2% (2304512/5097600 bytes)
+  Progress: 100.0% (5097600/5097600 bytes)
+✓ Completed: recording.h5 (5097600 bytes)
+✓ Download complete!
+  Files received: 1
+  Total size: 5097600 bytes
+  Saved to: recordings
 ```
+
+The download can include multiple files (video, inputs, memory data) depending on the recording type.
 
 ## Reading HDF5 Files
 
@@ -225,7 +231,7 @@ pysiphon rec-stop abc123def456
 ### Download
 
 ```bash
-pysiphon rec-download abc123def456 recording.h5
+pysiphon rec-download abc123def456 ./recordings
 ```
 
 ## Complete Example
@@ -279,8 +285,8 @@ with SiphonClient() as client:
     
     # Download
     print("\nDownloading recording...")
-    if client.download_recording(session_id, "recording.h5"):
-        print("Success! File saved to recording.h5")
+    if client.download_recording(session_id, "./recordings"):
+        print("Success! Files saved to ./recordings/")
     else:
         print("Download failed!")
 ```

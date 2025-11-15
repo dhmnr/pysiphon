@@ -53,6 +53,15 @@ Python gRPC client for Siphon service - provides memory manipulation, input cont
     - Real-time status monitoring
     - Performance metrics
 
+=== "Frame Streaming"
+
+    Real-time frame streaming for computer vision:
+    
+    - JPEG or raw format streaming
+    - Configurable quality settings
+    - Callback-based processing
+    - Low-latency real-time AI integration
+
 ## Quick Example
 
 ```python

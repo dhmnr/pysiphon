@@ -326,6 +326,151 @@ with SiphonClient() as client:
     print(f"Latency: {(elapsed/iterations)*1000:.2f}ms")
 ```
 
+## Frame Streaming
+
+Stream frames from the game in real-time:
+
+```python
+from pysiphon import SiphonClient
+
+with SiphonClient() as client:
+    client.init_all("config.toml")
+    
+    # Stream 100 JPEG frames at quality 85
+    result = client.stream_frames(
+        format="jpeg",
+        quality=85,
+        max_frames=100
+    )
+    
+    print(f"Streamed {result['frames_received']} frames")
+    print(f"Average FPS: {result['average_fps']:.1f}")
+```
+
+## Frame Processing with Callback
+
+Process each frame as it arrives:
+
+```python
+from pysiphon import SiphonClient
+import io
+from PIL import Image
+
+frame_count = 0
+
+def process_frame(frame_data):
+    global frame_count
+    frame_count += 1
+    
+    # Decode JPEG frame
+    image = Image.open(io.BytesIO(frame_data.data))
+    
+    # Process image (example: save every 10th frame)
+    if frame_count % 10 == 0:
+        image.save(f"frame_{frame_count:04d}.png")
+        print(f"Saved frame {frame_count}")
+    
+    # Return True to continue, False to stop
+    return frame_count < 100
+
+with SiphonClient() as client:
+    client.init_all("config.toml")
+    
+    result = client.stream_frames_to_callback(
+        process_frame,
+        format="jpeg",
+        quality=85
+    )
+    
+    print(f"Processed {result['frames_received']} frames")
+```
+
+## Real-Time Computer Vision
+
+Process frames for computer vision tasks:
+
+```python
+from pysiphon import SiphonClient
+import io
+import numpy as np
+from PIL import Image
+
+def detect_health_bar(frame_data):
+    # Decode frame
+    image = Image.open(io.BytesIO(frame_data.data))
+    pixels = np.array(image)
+    
+    # Extract health bar region (example coordinates)
+    health_region = pixels[10:30, 50:250]
+    
+    # Calculate red percentage (health indicator)
+    red_channel = health_region[:, :, 0]
+    health_percentage = np.mean(red_channel) / 255.0
+    
+    print(f"Frame {frame_data.frame_number}: Health ~{health_percentage*100:.0f}%")
+    
+    # Trigger action if health is low
+    if health_percentage < 0.3:
+        print("⚠️  LOW HEALTH DETECTED!")
+        # Could trigger healing here
+    
+    return True  # Continue streaming
+
+with SiphonClient() as client:
+    client.init_all("config.toml")
+    
+    print("Starting real-time health detection...")
+    client.stream_frames_to_callback(
+        detect_health_bar,
+        format="jpeg",
+        quality=75,  # Lower quality for faster processing
+        max_frames=300
+    )
+```
+
+## Frame Streaming with Control Loop
+
+Stream frames while controlling the game:
+
+```python
+from pysiphon import SiphonClient
+import io
+from PIL import Image
+import time
+
+with SiphonClient() as client:
+    client.init_all("config.toml")
+    
+    frame_count = 0
+    last_action_time = time.time()
+    
+    def process_and_control(frame_data):
+        nonlocal frame_count, last_action_time
+        frame_count += 1
+        
+        # Process frame
+        image = Image.open(io.BytesIO(frame_data.data))
+        
+        # Example: Take action every 2 seconds
+        current_time = time.time()
+        if current_time - last_action_time >= 2.0:
+            # Send input command
+            client.input_key_tap(["w"], 50, 0)
+            print(f"Frame {frame_count}: Moving forward")
+            last_action_time = current_time
+        
+        # Stream for 30 seconds
+        return frame_count < 450  # ~30s at 15fps
+    
+    result = client.stream_frames_to_callback(
+        process_and_control,
+        format="jpeg",
+        quality=85
+    )
+    
+    print(f"Completed: {result['frames_received']} frames, {result['average_fps']:.1f} FPS")
+```
+
 ## Next Steps
 
 - [Recording Guide](recording.md) - Advanced recording
