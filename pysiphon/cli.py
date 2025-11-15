@@ -5,6 +5,7 @@ import sys
 from typing import Optional
 from .client import SiphonClient
 from .utils import bytes_to_hex
+import builtins
 
 
 # Global client instance for interactive mode
@@ -61,14 +62,17 @@ def interactive(ctx):
     print("                            - Start recording (0 = unlimited duration)")
     print("  rec-stop <session_id>     - Stop recording session")
     print("  rec-status <session_id>   - Get recording status")
-    print("  rec-download <session_id> <output_file>")
-    print("                            - Download recording HDF5 file")
+    print("  rec-download <session_id> <output_directory>")
+    print("                            - Download recording files (video, inputs, memory)")
+    print("\n=== Streaming Commands ===")
+    print("  stream [format] [quality] [max_frames]")
+    print("                            - Stream frames (format: jpeg/raw, quality: 1-100, max_frames: 0=unlimited)")
     print("\n=== General ===")
     print("  quit, exit                - Exit client")
     
     while True:
         try:
-            command_line = input("\n> ").strip()
+            command_line = builtins.input("\n> ").strip()
             if not command_line:
                 continue
             
@@ -343,19 +347,34 @@ def interactive(ctx):
             
             elif command == 'rec-download':
                 if len(args) < 2:
-                    print("Usage: rec-download <session_id> <output_file>")
+                    print("Usage: rec-download <session_id> <output_directory>")
                     continue
                 
                 session_id = args[0]
-                output_file = args[1]
+                output_dir = args[1]
                 
                 print(f"Downloading recording: {session_id}")
-                print(f"Output file: {output_file}")
+                print(f"Output directory: {output_dir}")
                 
-                if client.download_recording(session_id, output_file):
+                if client.download_recording(session_id, output_dir):
                     print("Download successful!")
                 else:
                     print("Download failed!")
+            
+            elif command == 'stream':
+                format_arg = args[0] if len(args) > 0 else "jpeg"
+                quality = int(args[1]) if len(args) > 1 else 85
+                max_frames = int(args[2]) if len(args) > 2 else 0
+                
+                print(f"Starting frame stream...")
+                print(f"  Format: {format_arg}")
+                print(f"  Quality: {quality}")
+                print(f"  Max frames: {'unlimited' if max_frames == 0 else max_frames}")
+                
+                result = client.stream_frames(format=format_arg, quality=quality, max_frames=max_frames)
+                
+                if not result["success"]:
+                    print(f"Streaming failed: {result.get('message', 'Unknown error')}")
             
             else:
                 print(f"Unknown command: {command}")
@@ -617,16 +636,32 @@ def rec_status(ctx, session_id):
 
 @cli.command('rec-download')
 @click.argument('session_id')
-@click.argument('output_file')
+@click.argument('output_directory')
 @click.pass_context
-def rec_download(ctx, session_id, output_file):
-    """Download recording file."""
+def rec_download(ctx, session_id, output_directory):
+    """Download recording files to directory."""
     client = get_client(ctx.obj['host'])
     
-    if client.download_recording(session_id, output_file):
+    if client.download_recording(session_id, output_directory):
         click.echo("Download successful!")
     else:
         click.echo("Download failed!")
+        sys.exit(1)
+
+
+@cli.command()
+@click.option('--format', default='jpeg', help='Frame format (jpeg or raw)')
+@click.option('--quality', default=85, type=int, help='JPEG quality (1-100)')
+@click.option('--max-frames', default=0, type=int, help='Maximum frames (0=unlimited)')
+@click.pass_context
+def stream(ctx, format, quality, max_frames):
+    """Stream frames from server."""
+    client = get_client(ctx.obj['host'])
+    
+    result = client.stream_frames(format=format, quality=quality, max_frames=max_frames)
+    
+    if not result["success"]:
+        click.echo(f"Streaming failed: {result.get('message', 'Unknown error')}")
         sys.exit(1)
 
 

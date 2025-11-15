@@ -115,6 +115,11 @@ class SiphonServiceStub(object):
                 request_serializer=siphon__service__pb2.DownloadRecordingRequest.SerializeToString,
                 response_deserializer=siphon__service__pb2.RecordingChunk.FromString,
                 _registered_method=True)
+        self.StreamFrames = channel.unary_stream(
+                '/siphon_service.SiphonService/StreamFrames',
+                request_serializer=siphon__service__pb2.StreamFramesRequest.SerializeToString,
+                response_deserializer=siphon__service__pb2.FrameData.FromString,
+                _registered_method=True)
 
 
 class SiphonServiceServicer(object):
@@ -225,6 +230,13 @@ class SiphonServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def StreamFrames(self, request, context):
+        """Frame streaming endpoint
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_SiphonServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -307,6 +319,11 @@ def add_SiphonServiceServicer_to_server(servicer, server):
                     servicer.DownloadRecording,
                     request_deserializer=siphon__service__pb2.DownloadRecordingRequest.FromString,
                     response_serializer=siphon__service__pb2.RecordingChunk.SerializeToString,
+            ),
+            'StreamFrames': grpc.unary_stream_rpc_method_handler(
+                    servicer.StreamFrames,
+                    request_deserializer=siphon__service__pb2.StreamFramesRequest.FromString,
+                    response_serializer=siphon__service__pb2.FrameData.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -742,6 +759,33 @@ class SiphonService(object):
             '/siphon_service.SiphonService/DownloadRecording',
             siphon__service__pb2.DownloadRecordingRequest.SerializeToString,
             siphon__service__pb2.RecordingChunk.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def StreamFrames(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_stream(
+            request,
+            target,
+            '/siphon_service.SiphonService/StreamFrames',
+            siphon__service__pb2.StreamFramesRequest.SerializeToString,
+            siphon__service__pb2.FrameData.FromString,
             options,
             channel_credentials,
             insecure,

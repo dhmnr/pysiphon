@@ -15,6 +15,7 @@ Python gRPC client for Siphon service - provides memory manipulation, input cont
   - Screen capture
   - Command execution
   - Recording sessions with HDF5 output
+  - Frame streaming (JPEG/raw) with real-time processing
 
 ## Installation
 
@@ -76,7 +77,10 @@ pysiphon exec notepad.exe
 pysiphon rec-start ./output health,mana 30
 pysiphon rec-status <session-id>
 pysiphon rec-stop <session-id>
-pysiphon rec-download <session-id> recording.h5
+pysiphon rec-download <session-id> ./recordings
+
+# Frame streaming
+pysiphon stream --format jpeg --quality 85 --max-frames 100
 ```
 
 ### Custom Server Address
@@ -135,7 +139,20 @@ with SiphonClient("localhost:50051") as client:
     stats = client.stop_recording(session_id)
     print(f"FPS: {stats['actual_fps']:.1f}")
     
-    client.download_recording(session_id, "recording.h5")
+    client.download_recording(session_id, "./recordings")
+    
+    # Frame streaming
+    def process_frame(frame_data):
+        print(f"Frame {frame_data.frame_number}: {frame_data.width}x{frame_data.height}")
+        return True  # Return False to stop streaming
+    
+    result = client.stream_frames_to_callback(
+        process_frame, 
+        format="jpeg", 
+        quality=85, 
+        max_frames=100
+    )
+    print(f"Streamed {result['frames_received']} frames at {result['average_fps']:.1f} FPS")
 ```
 
 ## Documentation

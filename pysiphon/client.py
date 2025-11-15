@@ -689,58 +689,216 @@ class SiphonClient:
                 "dropped_frames": 0
             }
     
-    def download_recording(self, session_id: str, output_path: str, 
+    def download_recording(self, session_id: str, output_dir: str, 
                           show_progress: bool = True) -> bool:
         """
-        Download recording file from server.
+        Download recording files from server to directory.
+        
+        This downloads all recording files (video, inputs, memory) to the specified directory.
         
         Args:
             session_id: Recording session ID
-            output_path: Local path to save file
+            output_dir: Local directory to save files
             show_progress: Whether to show progress
         
         Returns:
             True if successful, False otherwise
         """
         try:
+            from pathlib import Path
+            
             request = pb2.DownloadRecordingRequest()
             request.session_id = session_id
             
-            # Open output file
-            with open(output_path, 'wb') as f:
-                total_bytes_received = 0
-                total_size = 0
-                chunks_received = 0
-                
-                if show_progress:
-                    print("Downloading recording...")
-                
-                # Stream chunks
-                for chunk in self.stub.DownloadRecording(request):
-                    # Write chunk data
-                    f.write(chunk.data)
-                    
-                    total_bytes_received += len(chunk.data)
-                    total_size = chunk.total_size
-                    chunks_received += 1
-                    
-                    # Show progress
-                    if show_progress and (chunks_received % 10 == 0 or chunk.is_final):
-                        progress = (total_bytes_received * 100.0) / total_size if total_size > 0 else 0
-                        print(f"\rProgress: {progress:.1f}% "
-                              f"({total_bytes_received}/{total_size} bytes)", end='', flush=True)
-                    
-                    if chunk.is_final:
-                        if show_progress:
-                            print()  # New line after progress
-                        break
+            # Create output directory if it doesn't exist
+            output_path = Path(output_dir)
+            output_path.mkdir(parents=True, exist_ok=True)
             
             if show_progress:
-                print(f"Download complete! Saved to: {output_path}")
-                print(f"Total: {chunks_received} chunks, {total_bytes_received} bytes")
+                print(f"Downloading recording to: {output_path}")
+            
+            current_file = None
+            current_filename = ""
+            total_bytes_received = 0
+            file_bytes_received = 0
+            file_size = 0
+            chunks_received = 0
+            files_received = 0
+            
+            # Stream chunks
+            for chunk in self.stub.DownloadRecording(request):
+                # Check if we need to open a new file
+                if chunk.filename != current_filename:
+                    # Close previous file if open
+                    if current_file is not None:
+                        current_file.close()
+                        if show_progress:
+                            print(f"\n✓ Completed: {current_filename} ({file_bytes_received} bytes)")
+                        files_received += 1
+                    
+                    # Open new file
+                    current_filename = chunk.filename
+                    file_bytes_received = 0
+                    file_size = chunk.total_size
+                    
+                    file_path = output_path / current_filename
+                    current_file = open(file_path, 'wb')
+                    
+                    if show_progress:
+                        print(f"Downloading: {current_filename} ({file_size} bytes)")
+                
+                # Write chunk data to file
+                current_file.write(chunk.data)
+                
+                total_bytes_received += len(chunk.data)
+                file_bytes_received += len(chunk.data)
+                chunks_received += 1
+                
+                # Show progress for large files
+                if show_progress and file_size > 10 * 1024 * 1024 and (chunks_received % 10 == 0 or chunk.is_final):
+                    progress = (file_bytes_received * 100.0) / file_size if file_size > 0 else 0
+                    print(f"\r  Progress: {progress:.1f}% ({file_bytes_received}/{file_size} bytes)", 
+                          end='', flush=True)
+                
+                if chunk.is_final:
+                    if current_file is not None:
+                        current_file.close()
+                        current_file = None
+                        if show_progress:
+                            print(f"\n✓ Completed: {current_filename} ({file_bytes_received} bytes)")
+                        files_received += 1
+                    break
+            
+            # Close file if still open
+            if current_file is not None:
+                current_file.close()
+            
+            if show_progress:
+                print(f"\n✓ Download complete!")
+                print(f"  Files received: {files_received}")
+                print(f"  Total size: {total_bytes_received} bytes")
+                print(f"  Saved to: {output_path}")
             
             return True
         except Exception as e:
             print(f"Download failed: {e}")
+            if current_file is not None:
+                current_file.close()
             return False
+    
+    # Streaming Methods
+    
+    def stream_frames(self, format: str = "jpeg", quality: int = 85, 
+                     max_frames: int = 0, callback=None) -> Dict[str, Any]:
+        """
+        Stream frames from server (blocking).
+        
+        Args:
+            format: Frame format ("jpeg" or "raw")
+            quality: JPEG quality (1-100, only used for jpeg format)
+            max_frames: Maximum frames to receive (0 = unlimited)
+            callback: Optional callback function called for each frame
+                     Signature: callback(frame_data: FrameData) -> bool
+                     Return False to stop streaming
+        
+        Returns:
+            Dictionary with streaming statistics
+        """
+        try:
+            import time
+            
+            request = pb2.StreamFramesRequest()
+            request.format = format
+            request.quality = quality
+            
+            print(f"Starting frame stream ({format}, quality={quality})")
+            if max_frames > 0:
+                print(f"Max frames: {max_frames}")
+            else:
+                print("Press Ctrl+C to stop streaming")
+            
+            frames_received = 0
+            start_time = time.time()
+            last_print_time = start_time
+            
+            try:
+                for frame_data in self.stub.StreamFrames(request):
+                    frames_received += 1
+                    
+                    # Call user callback if provided
+                    if callback is not None:
+                        try:
+                            if callback(frame_data) is False:
+                                break
+                        except Exception as e:
+                            print(f"\nCallback error: {e}")
+                            break
+                    
+                    # Print status every second
+                    now = time.time()
+                    elapsed_since_start = now - start_time
+                    elapsed_since_print = now - last_print_time
+                    
+                    if elapsed_since_print >= 1.0:
+                        avg_fps = frames_received / elapsed_since_start if elapsed_since_start > 0 else 0
+                        data_size_kb = len(frame_data.data) / 1024.0
+                        
+                        print(f"\rFrames: {frames_received} | FPS: {avg_fps:.1f} | "
+                              f"Size: {frame_data.width}x{frame_data.height} | "
+                              f"Frame #{frame_data.frame_number} | "
+                              f"Data: {data_size_kb:.1f} KB", end='', flush=True)
+                        last_print_time = now
+                    
+                    # Stop after max frames if specified
+                    if max_frames > 0 and frames_received >= max_frames:
+                        print(f"\nReached max frames limit: {max_frames}")
+                        break
+            
+            except KeyboardInterrupt:
+                print("\n\nStreaming interrupted by user")
+            
+            end_time = time.time()
+            total_time = end_time - start_time
+            avg_fps = frames_received / total_time if total_time > 0 else 0
+            
+            print("\n\n=== Streaming Complete ===")
+            print(f"Total frames received: {frames_received}")
+            print(f"Duration: {total_time:.2f}s")
+            print(f"Average FPS: {avg_fps:.2f}")
+            
+            return {
+                "success": True,
+                "frames_received": frames_received,
+                "duration_seconds": total_time,
+                "average_fps": avg_fps
+            }
+        
+        except grpc.RpcError as e:
+            print(f"Streaming failed: {e.details()}")
+            return {
+                "success": False,
+                "message": f"RPC failed: {e.details()}",
+                "frames_received": 0,
+                "duration_seconds": 0.0,
+                "average_fps": 0.0
+            }
+    
+    def stream_frames_to_callback(self, callback, format: str = "jpeg", 
+                                  quality: int = 85, max_frames: int = 0) -> Dict[str, Any]:
+        """
+        Stream frames and call callback for each frame.
+        
+        This is a convenience wrapper around stream_frames() for simple callback usage.
+        
+        Args:
+            callback: Callback function(frame_data) -> bool. Return False to stop.
+            format: Frame format ("jpeg" or "raw")
+            quality: JPEG quality (1-100)
+            max_frames: Maximum frames (0 = unlimited)
+        
+        Returns:
+            Dictionary with streaming statistics
+        """
+        return self.stream_frames(format=format, quality=quality, 
+                                 max_frames=max_frames, callback=callback)
 
