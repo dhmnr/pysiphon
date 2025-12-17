@@ -2,6 +2,7 @@
 
 import grpc
 import time
+import threading
 from typing import Optional, List, Dict, Any, Union
 from pathlib import Path
 from PIL import Image
@@ -901,4 +902,128 @@ class SiphonClient:
         """
         return self.stream_frames(format=format, quality=quality, 
                                  max_frames=max_frames, callback=callback)
+    
+    # Non-Blocking Streaming with Polling
+    
+    class FrameStreamHandle:
+        """Handle for non-blocking frame streaming with polling."""
+        
+        def __init__(self):
+            self.is_running = True
+            self.stream_thread: Optional[threading.Thread] = None
+            self.frame_mutex = threading.Lock()
+            self.latest_frame: Optional[pb2.FrameData] = None
+            self.has_new_frame = False
+            self.frames_received = 0
+            self.start_time = time.time()
+        
+        def stop(self):
+            """Stop the streaming thread."""
+            self.is_running = False
+            if self.stream_thread and self.stream_thread.is_alive():
+                self.stream_thread.join(timeout=5.0)
+        
+        def __del__(self):
+            """Cleanup when handle is destroyed."""
+            self.stop()
+    
+    def start_frame_stream(self, format: str = "jpeg", quality: int = 85) -> 'SiphonClient.FrameStreamHandle':
+        """
+        Start non-blocking frame stream in background thread.
+        
+        This starts a background thread that continuously receives frames from the server.
+        Only the latest frame is kept - older frames are dropped. Use get_latest_frame()
+        to poll for new frames in your control loop.
+        
+        Args:
+            format: Frame format ("jpeg" or "raw")
+            quality: JPEG quality (1-100, only used for jpeg format)
+        
+        Returns:
+            FrameStreamHandle that can be polled for frames
+        
+        Example:
+            ```python
+            # Start non-blocking stream
+            handle = client.start_frame_stream(format="jpeg", quality=85)
+            
+            # Control loop
+            while your_condition:
+                frame = client.get_latest_frame(handle)
+                if frame:
+                    # Process frame (run AI, computer vision, etc.)
+                    process_frame(frame)
+                    
+                    # Send commands based on processing
+                    client.input_key_tap(["w"], 50, 0)
+                else:
+                    time.sleep(0.005)  # Brief sleep if no new frame
+            
+            # Stop stream
+            client.stop_frame_stream(handle)
+            ```
+        """
+        handle = self.FrameStreamHandle()
+        handle.start_time = time.time()
+        
+        def stream_worker():
+            """Background thread that receives frames."""
+            try:
+                request = pb2.StreamFramesRequest()
+                request.format = format
+                request.quality = quality
+                
+                print(f"Frame stream started ({format}, quality={quality})")
+                
+                for frame_data in self.stub.StreamFrames(request):
+                    if not handle.is_running:
+                        break
+                    
+                    with handle.frame_mutex:
+                        handle.latest_frame = frame_data
+                        handle.has_new_frame = True
+                        handle.frames_received += 1
+                
+            except grpc.RpcError as e:
+                if e.code() != grpc.StatusCode.CANCELLED:
+                    print(f"Stream error: {e.details()}")
+            except Exception as e:
+                print(f"Stream error: {e}")
+        
+        handle.stream_thread = threading.Thread(target=stream_worker, daemon=True)
+        handle.stream_thread.start()
+        
+        return handle
+    
+    def get_latest_frame(self, handle: 'SiphonClient.FrameStreamHandle') -> Optional[pb2.FrameData]:
+        """
+        Get latest frame from non-blocking stream (non-blocking poll).
+        
+        Args:
+            handle: FrameStreamHandle from start_frame_stream()
+        
+        Returns:
+            Latest FrameData if a new frame is available, None otherwise.
+            After returning a frame, it's marked as consumed until a new one arrives.
+        """
+        if not handle or not handle.has_new_frame:
+            return None
+        
+        with handle.frame_mutex:
+            if not handle.has_new_frame:
+                return None
+            
+            frame = handle.latest_frame
+            handle.has_new_frame = False  # Mark as consumed
+            return frame
+    
+    def stop_frame_stream(self, handle: 'SiphonClient.FrameStreamHandle'):
+        """
+        Stop non-blocking frame stream.
+        
+        Args:
+            handle: FrameStreamHandle from start_frame_stream()
+        """
+        if handle:
+            handle.stop()
 

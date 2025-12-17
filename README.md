@@ -79,8 +79,11 @@ pysiphon rec-status <session-id>
 pysiphon rec-stop <session-id>
 pysiphon rec-download <session-id> ./recordings
 
-# Frame streaming
+# Frame streaming (blocking)
 pysiphon stream --format jpeg --quality 85 --max-frames 100
+
+# Non-blocking frame stream with control loop
+pysiphon stream-loop --format jpeg --quality 85 --duration 10
 ```
 
 ### Custom Server Address
@@ -141,7 +144,7 @@ with SiphonClient("localhost:50051") as client:
     
     client.download_recording(session_id, "./recordings")
     
-    # Frame streaming
+    # Frame streaming (blocking with callback)
     def process_frame(frame_data):
         print(f"Frame {frame_data.frame_number}: {frame_data.width}x{frame_data.height}")
         return True  # Return False to stop streaming
@@ -153,6 +156,37 @@ with SiphonClient("localhost:50051") as client:
         max_frames=100
     )
     print(f"Streamed {result['frames_received']} frames at {result['average_fps']:.1f} FPS")
+    
+    # Non-blocking frame streaming with polling (for control loops)
+    # Start background stream
+    handle = client.start_frame_stream(format="jpeg", quality=85)
+    
+    # Control loop - process frames and send commands
+    import time
+    start_time = time.time()
+    frames_processed = 0
+    
+    while time.time() - start_time < 10:  # Run for 10 seconds
+        # Poll for latest frame (non-blocking)
+        frame = client.get_latest_frame(handle)
+        
+        if frame:
+            frames_processed += 1
+            
+            # Process frame (run AI, computer vision, etc.)
+            # Example: decode JPEG, analyze pixels, make decisions
+            print(f"Processing frame {frame.frame_number}")
+            
+            # Send commands based on frame analysis
+            if frames_processed % 30 == 0:  # Every ~2 seconds at 15fps
+                client.input_key_tap(["w"], 50, 0)
+        else:
+            # No new frame yet, sleep briefly
+            time.sleep(0.005)
+    
+    # Stop stream
+    client.stop_frame_stream(handle)
+    print(f"Processed {frames_processed} frames")
 ```
 
 ## Documentation

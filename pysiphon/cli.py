@@ -67,6 +67,8 @@ def interactive(ctx):
     print("\n=== Streaming Commands ===")
     print("  stream [format] [quality] [max_frames]")
     print("                            - Stream frames (format: jpeg/raw, quality: 1-100, max_frames: 0=unlimited)")
+    print("  stream-loop [format] [quality] [duration_sec]")
+    print("                            - Non-blocking stream with control loop example")
     print("\n=== General ===")
     print("  quit, exit                - Exit client")
     
@@ -376,6 +378,92 @@ def interactive(ctx):
                 if not result["success"]:
                     print(f"Streaming failed: {result.get('message', 'Unknown error')}")
             
+            elif command == 'stream-loop':
+                import time
+                
+                format_arg = args[0] if len(args) > 0 else "jpeg"
+                quality = int(args[1]) if len(args) > 1 else 85
+                duration_sec = int(args[2]) if len(args) > 2 else 10
+                
+                print("\n=== Starting Non-Blocking Frame Stream Control Loop ===")
+                print(f"Format: {format_arg}")
+                print(f"Quality: {quality}")
+                print(f"Duration: {duration_sec}s")
+                print("\nThis demonstrates a control loop where you can:")
+                print("  - Receive frames continuously in background")
+                print("  - Process each frame (add your AI/logic here)")
+                print("  - Send input commands based on processing")
+                print("\nPress Ctrl+C to stop early\n")
+                
+                # Start non-blocking frame stream
+                stream_handle = client.start_frame_stream(format_arg, quality)
+                
+                start_time = time.time()
+                frames_processed = 0
+                commands_sent = 0
+                
+                try:
+                    # Main control loop - this is where you'd add your AI/processing logic
+                    while True:
+                        # Check if duration elapsed
+                        elapsed = time.time() - start_time
+                        if elapsed >= duration_sec:
+                            break
+                        
+                        # Get latest frame (non-blocking)
+                        frame = client.get_latest_frame(stream_handle)
+                        if frame:
+                            frames_processed += 1
+                            
+                            # === YOUR PROCESSING LOGIC GOES HERE ===
+                            # Example: Simple demonstration logic
+                            # In real use, you'd run your AI model, computer vision, etc.
+                            
+                            # Log frame info every 15 frames
+                            if frames_processed % 15 == 0:
+                                fps = frames_processed / elapsed if elapsed > 0 else 0
+                                data_size_kb = len(frame.data) / 1024.0
+                                print(f"\rFrame #{frame.frame_number} | "
+                                      f"Size: {frame.width}x{frame.height} | "
+                                      f"FPS: {fps:.1f} | "
+                                      f"Data: {data_size_kb:.1f} KB | "
+                                      f"Commands sent: {commands_sent}", end='', flush=True)
+                            
+                            # Example: Send a keystroke every 30 frames (every ~2 seconds at 15fps)
+                            if frames_processed % 30 == 0:
+                                # Uncomment to actually send inputs:
+                                # client.input_key_tap(["w"], 50, 0)
+                                commands_sent += 1
+                            
+                            # Example: You could decode JPEG and analyze pixels:
+                            # - Use PIL/OpenCV to decode frame.data
+                            # - Run object detection, OCR, etc.
+                            # - Make decisions based on what you see
+                            # - Send appropriate inputs
+                            
+                        else:
+                            # No new frame yet, sleep briefly to avoid busy-waiting
+                            time.sleep(0.005)
+                        
+                        # You can also send commands independently of frames:
+                        # client.get_attribute("player_health")
+                        # client.set_attribute("some_value", 100, "int")
+                    
+                except KeyboardInterrupt:
+                    print("\n\nControl loop interrupted by user")
+                
+                finally:
+                    # Stop streaming
+                    client.stop_frame_stream(stream_handle)
+                    
+                    total_time = time.time() - start_time
+                    
+                    print("\n\n=== Control Loop Complete ===")
+                    print(f"Duration: {total_time:.2f}s")
+                    print(f"Frames processed: {frames_processed}")
+                    print(f"Average FPS: {frames_processed / total_time:.2f}" if total_time > 0 else "Average FPS: 0.00")
+                    print(f"Commands sent: {commands_sent}")
+            
             else:
                 print(f"Unknown command: {command}")
                 print("Type 'quit' to exit")
@@ -663,6 +751,83 @@ def stream(ctx, format, quality, max_frames):
     if not result["success"]:
         click.echo(f"Streaming failed: {result.get('message', 'Unknown error')}")
         sys.exit(1)
+
+
+@cli.command('stream-loop')
+@click.option('--format', default='jpeg', help='Frame format (jpeg or raw)')
+@click.option('--quality', default=85, type=int, help='JPEG quality (1-100)')
+@click.option('--duration', default=10, type=int, help='Duration in seconds')
+@click.pass_context
+def stream_loop(ctx, format, quality, duration):
+    """Non-blocking frame stream with control loop example."""
+    import time
+    
+    client = get_client(ctx.obj['host'])
+    
+    click.echo("\n=== Starting Non-Blocking Frame Stream Control Loop ===")
+    click.echo(f"Format: {format}")
+    click.echo(f"Quality: {quality}")
+    click.echo(f"Duration: {duration}s")
+    click.echo("\nThis demonstrates a control loop where you can:")
+    click.echo("  - Receive frames continuously in background")
+    click.echo("  - Process each frame (add your AI/logic here)")
+    click.echo("  - Send input commands based on processing")
+    click.echo("\nPress Ctrl+C to stop early\n")
+    
+    # Start non-blocking frame stream
+    stream_handle = client.start_frame_stream(format, quality)
+    
+    start_time = time.time()
+    frames_processed = 0
+    commands_sent = 0
+    
+    try:
+        # Main control loop - this is where you'd add your AI/processing logic
+        while True:
+            # Check if duration elapsed
+            elapsed = time.time() - start_time
+            if elapsed >= duration:
+                break
+            
+            # Get latest frame (non-blocking)
+            frame = client.get_latest_frame(stream_handle)
+            if frame:
+                frames_processed += 1
+                
+                # Log frame info every 15 frames
+                if frames_processed % 15 == 0:
+                    fps = frames_processed / elapsed if elapsed > 0 else 0
+                    data_size_kb = len(frame.data) / 1024.0
+                    click.echo(f"\rFrame #{frame.frame_number} | "
+                              f"Size: {frame.width}x{frame.height} | "
+                              f"FPS: {fps:.1f} | "
+                              f"Data: {data_size_kb:.1f} KB | "
+                              f"Commands sent: {commands_sent}", nl=False)
+                
+                # Example: Send a keystroke every 30 frames
+                if frames_processed % 30 == 0:
+                    # Uncomment to actually send inputs:
+                    # client.input_key_tap(["w"], 50, 0)
+                    commands_sent += 1
+                
+            else:
+                # No new frame yet, sleep briefly to avoid busy-waiting
+                time.sleep(0.005)
+        
+    except KeyboardInterrupt:
+        click.echo("\n\nControl loop interrupted by user")
+    
+    finally:
+        # Stop streaming
+        client.stop_frame_stream(stream_handle)
+        
+        total_time = time.time() - start_time
+        
+        click.echo("\n\n=== Control Loop Complete ===")
+        click.echo(f"Duration: {total_time:.2f}s")
+        click.echo(f"Frames processed: {frames_processed}")
+        click.echo(f"Average FPS: {frames_processed / total_time:.2f}" if total_time > 0 else "Average FPS: 0.00")
+        click.echo(f"Commands sent: {commands_sent}")
 
 
 if __name__ == '__main__':
