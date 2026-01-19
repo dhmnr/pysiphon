@@ -91,6 +91,7 @@ def parse_config_file(filepath: str) -> Tuple[str, str, dict]:
             "type": attr_config.get("type", ""),
             "length": attr_config.get("length", 0),
             "method": attr_config.get("method", ""),
+            "mask": attr_config.get("mask", 0xFF),
         }
     
     return process_name, process_window_name, attributes

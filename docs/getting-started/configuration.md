@@ -65,14 +65,15 @@ Each attribute defines how to find and read/write a value in memory.
 |-------|------|-------------|
 | `pattern` | string | Hex pattern to search (use `??` for wildcards) |
 | `offsets` | array | Offset chain to follow from pattern match |
-| `type` | string | Data type: `"int"`, `"float"`, `"array"`, or `"bool"` |
+| `type` | string | Data type: `"int"`, `"float"`, `"array"`, `"bool"`, or `"binary"` |
 
 ### Optional Fields
 
 | Field | Type | Description | Default |
 |-------|------|-------------|---------|
 | `length` | integer | Byte length (required for array type) | `0` |
-| `method` | string | Resolution method: `"pointer"` or `"direct"` | `""` |
+| `method` | string | Resolution method: `"pointer"`, `"direct"`, or `"dll"` | `""` |
+| `mask` | integer | Bit mask for binary type (e.g., `0x08` for bit 3) | `0xFF` |
 
 ### Attribute Types
 
@@ -127,6 +128,48 @@ type = "bool"
 length = 1
 method = "direct"
 ```
+
+#### Binary (binary)
+
+Individual bit(s) within a byte. Use `mask` to specify which bit(s) to read/write.
+This is useful for packed boolean flags where multiple values share the same byte.
+
+```toml
+[attributes.no_hit]
+pattern = "48 8B 48 08 49 89 8D"
+offsets = [0x530]
+type = "binary"
+mask = 0x08  # Bit 3
+method = "dll"
+
+[attributes.no_attack]
+pattern = "48 8B 48 08 49 89 8D"
+offsets = [0x530]
+type = "binary"
+mask = 0x10  # Bit 4
+method = "dll"
+
+[attributes.no_move]
+pattern = "48 8B 48 08 49 89 8D"
+offsets = [0x530]
+type = "binary"
+mask = 0x20  # Bit 5
+method = "dll"
+```
+
+!!! tip "Bit Masks"
+    Common mask values:
+    
+    | Bit | Mask |
+    |-----|------|
+    | 0 | `0x01` |
+    | 1 | `0x02` |
+    | 2 | `0x04` |
+    | 3 | `0x08` |
+    | 4 | `0x10` |
+    | 5 | `0x20` |
+    | 6 | `0x40` |
+    | 7 | `0x80` |
 
 ## Pattern Syntax
 

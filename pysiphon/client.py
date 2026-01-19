@@ -80,6 +80,7 @@ class SiphonClient:
                 attr_proto.type = attr_config["type"]
                 attr_proto.length = attr_config["length"]
                 attr_proto.method = attr_config["method"]
+                attr_proto.mask = attr_config["mask"]
             
             # Send to server
             response = self.stub.SetProcessConfig(request)
@@ -362,7 +363,7 @@ class SiphonClient:
                 if isinstance(value, str):
                     value = hex_to_bytes(value)
                 request.array_value = value
-            elif value_type == "bool":
+            elif value_type == "bool" or value_type == "binary":
                 request.bool_value = bool(value)
             else:
                 return {

@@ -184,5 +184,24 @@ pattern = "48 8B 48 08 49 89 8D"
 offsets = [0x190, 0x18, 0x24]
 type = "float"
 
+[attributes.NpcNoHit]
+method = "dll"
+pattern = "48 8B 48 08 49 89 8D"
+offsets = [0x530]
+type = "binary"
+mask = 0x08
 
+[attributes.NpcNoAttack]
+method = "dll"
+pattern = "48 8B 48 08 49 89 8D"
+offsets = [0x530]
+type = "binary"
+mask = 0x10
+
+[attributes.NpcNoMove]
+method = "dll"
+pattern = "48 8B 48 08 49 89 8D"
+offsets = [0x530]
+type = "binary"
+mask = 0x20
 

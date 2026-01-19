@@ -156,6 +156,7 @@ message ProcessAttributeProto {
   string type = 4;
   uint64 length = 5;
   string method = 6;
+  uint32 mask = 7;  // For binary type: bit mask (e.g., 0x08 for bit 3)
 }
 
 // Request message for setting process configuration
